@@ -1,0 +1,5 @@
+---
+- name: Install Lighthouse
+  hosts: localhost
+  roles:
+    - single_task_role
