@@ -36,3 +36,6 @@
    ```bash
    ansible-playbook site.yml ; ansible-playbook site.yml -i inventory.yml
    ```
+7) After install check works 
+ - http://<external_ip_lighthouse>/#http://<external_ip_clickhouse>:8123/
+ - DATABASE logs TABLE access_log COLUMN message "My Test Message"
