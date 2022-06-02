@@ -1,4 +1,10 @@
 ---
 # defaults file for single_task_role
-path: "/tmp/test3.txt"
-content: "test message3"
+name: first-instance
+zone: ru-central1-a
+subnet_name: default-ru-central1-a
+image_family: centos-7
+path_ssh: /home/ivan/.ssh/id_rsa.pub
+memory: 8
+count_cores: 4
+disk_size: 30

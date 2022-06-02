@@ -1,5 +1,54 @@
 ---
-- name: Install Lighthouse
+- name: create VM
   hosts: localhost
+  tags: createvm
   roles:
     - single_task_role
+- name: Install Clickhouse
+  hosts: clickhouse
+  become: yes
+  become_user: root
+  remote_user: centos
+  tags: clickhouse
+  roles:
+    - clickhouse
+  post_tasks:
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'CREATE DATABASE logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc !=82
+      changed_when: create_db.rc == 0
+    - name: Create table
+      ansible.builtin.command: "clickhouse-client -q 'CREATE TABLE IF NOT EXISTS  logs.access_logs (message String) ENGINE = MergeTree() ORDER BY tuple()'"
+
+- name: Install Vector
+  hosts: vector
+  become: yes
+  become_user: root
+  remote_user: centos
+  tags: vector
+  roles:
+    - vector-role
+  post_tasks:
+    - name: Copy config vector
+      template:
+        src: vector.toml
+        dest: /home/centos/vector.toml
+        owner: root
+        group: root
+        mode: 0640
+
+    - name: Start toml config file
+      ansible.builtin.shell: vector --config /home/centos/vector.toml &
+
+    - name: Send test data syslog in clickhouse
+      ansible.builtin.shell: logger -p local0.info --server 127.0.0.1 --tcp --port 514 "My Test Message"
+
+- name: Install Lighthouse
+  hosts: lighthouse
+  become: yes
+  become_user: root
+  remote_user: centos
+  tags: lighthouse
+  roles:
+    - lighthouse-role

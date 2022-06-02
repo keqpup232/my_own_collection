@@ -1,9 +1,40 @@
 ---
-- name: run the new module
+- name: create node-clickhouse
   my_own_module:
-    path: "{{ path }}"
-    content: "{{ content }}"
+    name: "node-clickhouse"
+    zone: "{{ zone }}"
+    subnet_name: "{{ subnet_name }}"
+    image_family: "{{ image_family }}"
+    path_ssh: "{{ path_ssh }}"
+    memory: 8
+    count_cores: 4
   register: testout
 - name: dump test output
   debug:
-    msg: '{{ testout }}'
+    msg: "{{ testout['message'].split('\n') }}"
+- name: create node-vector
+  my_own_module:
+    name: "node-vector"
+    zone: "ru-central1-a"
+    subnet_name: "default-ru-central1-a"
+    image_family: "centos-7"
+    path_ssh: "/home/ivan/.ssh/id_rsa.pub"
+    memory: 8
+    count_cores: 4
+  register: testout
+- name: dump test output
+  debug:
+    msg: "{{ testout['message'].split('\n') }}"
+- name: create node-lighthouse
+  my_own_module:
+    name: "node-lighthouse"
+    zone: "ru-central1-a"
+    subnet_name: "default-ru-central1-a"
+    image_family: "centos-7"
+    path_ssh: "/home/ivan/.ssh/id_rsa.pub"
+    memory: 8
+    count_cores: 4
+  register: testout
+- name: dump test output
+  debug:
+    msg: "{{ testout['message'].split('\n') }}"
