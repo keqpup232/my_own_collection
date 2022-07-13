@@ -4,9 +4,6 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import (absolute_import, division, print_function)
-import os.path
-import json
-
 __metaclass__ = type
 
 DOCUMENTATION = r'''
@@ -74,7 +71,9 @@ message:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
-
+import os.path
+from subprocess import PIPE, Popen
+import json
 
 def run_module():
     module_args = dict(
@@ -84,7 +83,7 @@ def run_module():
         image_family=dict(type='str', required=True),
         path_ssh=dict(type='str', required=True),
         memory=dict(type='str', required=False),
-        count_cores=dict(type='str', required=False),
+        count_cores=dict(type='str', required=False), # FEEDBACK: Я бы переименовал в cpu_count просто для звучания
         disk_size=dict(type='str', required=False)
     )
 
@@ -101,6 +100,8 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
+    # FEEDBACK: По хорошему стоит все входящие параметры проверять защитой от дурака. 
+    # FEEDBACK: Вдруг там буквы, можно упасть раньше, чем попытаемся выполнить создание
     command_disk_size = ' '
     command_core_count = ' '
     command_mem_size = ' '
@@ -118,16 +119,20 @@ def run_module():
                     --create-boot-disk image-folder-id=standard-images,image-family=' + module.params['image_family'] + ' \
                     --metadata-from-file ssh-keys=' + module.params['path_ssh'] + command_mem_size + command_core_count + command_disk_size
 
-    search_name_instance = ' | ' + module.params['name']
-    os.system('yc compute instance list | grep ' + module.params['name'] + ' > list_instance.txt')
-    with open("list_instance.txt", "r") as f:
-        if search_name_instance in f.read():
+    # FEEDBACK: Чтобы не сорить на файловой системе, 
+    # можно попытаться сохранять весь yc compute instance list в переменную
+    # Например, использовать команду с --format json
+    # а потом результат десериализовать в dict и искать в нём module.params['name']
+    # Глянь как примерно можно это переделать ниже:
+    res_cmd_instances = Popen('yc compute instance list --format json'.split(), stdout=PIPE).stdout.read().strip().decode('utf-8')
+    list_instances = json.loads(res_cmd_instances)
+    for instance in list_instances:
+        if instance['name'].strip() == module.params['name'].strip():
             result['changed'] = False
             result['message'] = module.params['name'] + ' is already set'
             module.exit_json(**result)
-        else:
-            file_log_json = 'log_'+module.params['name']+'.json'
-            os.system(command + ' --format json > ' + file_log_json)
+    # FEEDBACK: Тогда и всё это ниже будет уже не нужно, потому что у тебя есть в памяти 
+    # лист всех инстансов и ты можешь делать с ним что хочешь в момент исполнения
     os.system('rm list_instance.txt')
     file_instance_list = 'list_' + module.params['name'] + '.txt'
     os.system("yc compute instance list | sed -n '1p;2p;3p' > "+file_instance_list)
@@ -139,6 +144,9 @@ def run_module():
     data = json.loads(open(file_log_json).read())
     external_ip = data["network_interfaces"][0]["primary_v4_address"]["one_to_one_nat"]["address"]
 
+    # FEEDBACK: С инвентори задумка забавная, жалко только, что файлик формируется не на стандартном месте.
+    # Но можно пойти ещё дальше, сгенерировать json с готовым динамическим инвентори,
+    # который можно получить в ansible через register, тогда с файликами можно не возиться вообще
     if module.params['name']=='node-clickhouse':
         with open("inventory.yml", "a") as f:
             f.write('---\nclickhouse:\n  hosts:\n    ' + module.params['name'] + ':\n      '+'ansible_host: ' + external_ip + '\n')
