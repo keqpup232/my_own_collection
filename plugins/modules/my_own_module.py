@@ -1,73 +1,18 @@
 #!/usr/bin/python
 
-# Copyright: (c) 2018, Terry Jones <terry.jones@example.org>
+# Copyright: (c) 2022, Ivan Gavryushin <keqpup232@gmail.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 DOCUMENTATION = r'''
----
-module: my_test
-
-short_description: This is my test module
-
-# If this is part of a collection, you need to use semantic versioning,
-# i.e. the version is of the form "2.5.0" and not "2.4".
-version_added: "1.0.0"
-
-description: This is my longer description explaining my test module.
-
-options:
-    name:
-        description: This is the message to send to the test module.
-        required: true
-        type: str
-    new:
-        description:
-            - Control to demo if the result of this module is changed or not.
-            - Parameter description can be a list as well.
-        required: false
-        type: bool
-# Specify this value according to your collection
-# in format of namespace.collection.doc_fragment_name
-extends_documentation_fragment:
-    - my_namespace.my_collection.my_doc_fragment_name
-
-author:
-    - Your Name (@yourGitHubHandle)
 '''
 
 EXAMPLES = r'''
-# Pass in a message
-- name: Test with a message
-  my_namespace.my_collection.my_test:
-    name: hello world
-
-# pass in a message and have changed true
-- name: Test with a message and changed output
-  my_namespace.my_collection.my_test:
-    name: hello world
-    new: true
-
-# fail the module
-- name: Test failure of the module
-  my_namespace.my_collection.my_test:
-    name: fail me
 '''
 
 RETURN = r'''
-# These are examples of possible return values, and in general should use other names for return values.
-original_message:
-    description: The original name param that was passed in.
-    type: str
-    returned: always
-    sample: 'hello world'
-message:
-    description: The output message that the test module generates.
-    type: str
-    returned: always
-    sample: 'goodbye'
 '''
 
 from ansible.module_utils.basic import AnsibleModule
@@ -83,7 +28,7 @@ def run_module():
         image_family=dict(type='str', required=True),
         path_ssh=dict(type='str', required=True),
         memory=dict(type='str', required=False),
-        count_cores=dict(type='str', required=False), # FEEDBACK: Я бы переименовал в cpu_count просто для звучания
+        cpu_count=dict(type='str', required=False),
         disk_size=dict(type='str', required=False)
     )
 
@@ -100,15 +45,41 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    # FEEDBACK: По хорошему стоит все входящие параметры проверять защитой от дурака. 
-    # FEEDBACK: Вдруг там буквы, можно упасть раньше, чем попытаемся выполнить создание
+    if (module.params['zone'] == 'ru-central1-a') or (module.params['zone'] == 'ru-central1-b') or (module.params['zone'] == 'ru-central1-c'):
+        pass
+    else:
+        result['changed'] = False
+        result['message'] = module.params['zone'] + ' zone is incorrect'
+        module.exit_json(**result)
+
+    if module.params['memory'].isnumeric():
+        pass
+    else:
+        result['changed'] = False
+        result['message'] = module.params['memory'] + ' memory is incorrect'
+        module.exit_json(**result)
+
+    if module.params['cpu_count'].isnumeric():
+        pass
+    else:
+        result['changed'] = False
+        result['message'] = module.params['cpu_count'] + ' cpu_count is incorrect'
+        module.exit_json(**result)
+
+    if module.params['disk_size'].isnumeric():
+        pass
+    else:
+        result['changed'] = False
+        result['message'] = module.params['disk_size'] + ' disk_size is incorrect'
+        module.exit_json(**result)
+
     command_disk_size = ' '
     command_core_count = ' '
     command_mem_size = ' '
     if module.params['disk_size']:
         command_disk_size = ' --create-disk size=' + module.params['disk_size'] + 'GB'
-    if module.params['count_cores']:
-        command_core_count = ' --cores ' + module.params['count_cores']
+    if module.params['cpu_count']:
+        command_core_count = ' --cores ' + module.params['cpu_count']
     if module.params['memory']:
         command_mem_size = ' --memory ' + module.params['memory'] + 'GB'
 
@@ -119,11 +90,7 @@ def run_module():
                     --create-boot-disk image-folder-id=standard-images,image-family=' + module.params['image_family'] + ' \
                     --metadata-from-file ssh-keys=' + module.params['path_ssh'] + command_mem_size + command_core_count + command_disk_size
 
-    # FEEDBACK: Чтобы не сорить на файловой системе, 
-    # можно попытаться сохранять весь yc compute instance list в переменную
-    # Например, использовать команду с --format json
-    # а потом результат десериализовать в dict и искать в нём module.params['name']
-    # Глянь как примерно можно это переделать ниже:
+
     res_cmd_instances = Popen('yc compute instance list --format json'.split(), stdout=PIPE).stdout.read().strip().decode('utf-8')
     list_instances = json.loads(res_cmd_instances)
     for instance in list_instances:
@@ -131,22 +98,26 @@ def run_module():
             result['changed'] = False
             result['message'] = module.params['name'] + ' is already set'
             module.exit_json(**result)
-    # FEEDBACK: Тогда и всё это ниже будет уже не нужно, потому что у тебя есть в памяти 
-    # лист всех инстансов и ты можешь делать с ним что хочешь в момент исполнения
-    os.system('rm list_instance.txt')
-    file_instance_list = 'list_' + module.params['name'] + '.txt'
-    os.system("yc compute instance list | sed -n '1p;2p;3p' > "+file_instance_list)
-    os.system('yc compute instance list | grep ' + module.params['name'] + ' >> '+file_instance_list)
-    os.system("yc compute instance list | sed  -e  '1{$q;}' -e '$!{h;d;}' -e x >> "+file_instance_list)
-    with open(file_instance_list, "r") as f:
-        result['message'] = f.read()
 
+    with open("list_instances.json", "a") as f:
+        f.write(str(list_instances))
+
+    file_log_json = 'log_'+module.params['name']+'.json'
+    os.system(command + ' --format json > ' + file_log_json)
     data = json.loads(open(file_log_json).read())
     external_ip = data["network_interfaces"][0]["primary_v4_address"]["one_to_one_nat"]["address"]
 
     # FEEDBACK: С инвентори задумка забавная, жалко только, что файлик формируется не на стандартном месте.
+    # - Про какое стандартное место идет речь?
+
     # Но можно пойти ещё дальше, сгенерировать json с готовым динамическим инвентори,
     # который можно получить в ansible через register, тогда с файликами можно не возиться вообще
+    # - Не очень понял идею, вместо файлов формировать json или dict, который по итогу выплюнет один файл инвентори?
+    # - Или модуль как то будет передать данные в ansible через register.
+    # - Можно питоном запросить у яндекса списки всех машин через $ yc compute instance list --format json что впринципе есть в переменной res_cmd_instances
+    # - А потом что? Создавать inventory и дополнять его? Модуль вызывается по сути столько раз, сколько виртуалок создается.
+    # - Идея по сути таже получилась
+
     if module.params['name']=='node-clickhouse':
         with open("inventory.yml", "a") as f:
             f.write('---\nclickhouse:\n  hosts:\n    ' + module.params['name'] + ':\n      '+'ansible_host: ' + external_ip + '\n')
@@ -161,6 +132,8 @@ def run_module():
         with open("inventory.yml", "a") as f:
             f.write('lighthouse:\n  hosts:\n    ' + module.params['name'] + ':\n      '+'ansible_host: ' + external_ip + '\n')
 
+
+    result['message'] = 'vm is created successful'
     module.exit_json(**result)
 
 

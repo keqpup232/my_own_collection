@@ -1,8 +1,13 @@
 # Ansible Collection - my_own_namespace.yandex_cloud_elk
 ### Prepare to launch ansible
-1) You need install yc and create ssh 
-   - [manual](https://cloud.yandex.com/en/docs/cli/operations/install-cli) cli 
+1) In first start You need install yc and create ssh 
+   - [manual](https://cloud.yandex.com/en/docs/cli/operations/install-cli) cli -> ```yc init```
    - [manual](https://cloud.yandex.ru/docs/managed-kubernetes/operations/node-connect-ssh) ssh
+2) Create network if you need
+   ```bash
+   yc vpc network create --name default_network
+   yc vpc subnet create --name default_subnet --range 192.168.100.0/24 --network-name default_network
+   ```
 2) Set your properties VM in role single_task_role/tasks or defaults
    ```yml
    - name: create node-clickhouse
@@ -34,7 +39,7 @@
    ```
 6) Start playbook
    ```bash
-   ansible-playbook site.yml ; ansible-playbook site.yml -i inventory.yml
+   ansible-playbook site.yml --tags="createvm" ; ansible-playbook site.yml -i inventory.yml --tags="clickhouse,vector,lighthouse"
    ```
 7) After install check works 
  - http://<external_ip_lighthouse>/#http://<external_ip_clickhouse>:8123/

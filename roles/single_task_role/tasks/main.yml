@@ -7,7 +7,8 @@
     image_family: "{{ image_family }}"
     path_ssh: "{{ path_ssh }}"
     memory: 8
-    count_cores: 4
+    cpu_count: 4
+    disk_size: 30
   register: testout
 - name: dump test output
   debug:
@@ -16,11 +17,12 @@
   my_own_module:
     name: "node-vector"
     zone: "ru-central1-a"
-    subnet_name: "default-ru-central1-a"
+    subnet_name: "{{ subnet_name }}"
     image_family: "centos-7"
-    path_ssh: "/home/ivan/.ssh/id_rsa.pub"
+    path_ssh: "{{ path_ssh }}"
     memory: 8
-    count_cores: 4
+    cpu_count: 4
+    disk_size: 30
   register: testout
 - name: dump test output
   debug:
@@ -29,11 +31,12 @@
   my_own_module:
     name: "node-lighthouse"
     zone: "ru-central1-a"
-    subnet_name: "default-ru-central1-a"
+    subnet_name: "{{ subnet_name }}"
     image_family: "centos-7"
-    path_ssh: "/home/ivan/.ssh/id_rsa.pub"
+    path_ssh: "{{ path_ssh }}"
     memory: 8
-    count_cores: 4
+    cpu_count: 4
+    disk_size: 30
   register: testout
 - name: dump test output
   debug:

@@ -4,6 +4,7 @@
   tags: createvm
   roles:
     - single_task_role
+
 - name: Install Clickhouse
   hosts: clickhouse
   become: yes
@@ -11,7 +12,7 @@
   remote_user: centos
   tags: clickhouse
   roles:
-    - clickhouse
+    - ansible-clickhouse
   post_tasks:
     - name: Create database
       ansible.builtin.command: "clickhouse-client -q 'CREATE DATABASE logs;'"

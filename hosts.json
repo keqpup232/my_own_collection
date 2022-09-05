@@ -1,0 +1,23 @@
+{
+  "clickhouse": {
+    "hosts": {
+      "node-clickhouse": {
+        "ansible_host": "ip"
+      }
+    }
+  },
+  "vector": {
+    "hosts": {
+      "node-vector": {
+        "ansible_host": "ip"
+      }
+    }
+  },
+  "lighthouse": {
+    "hosts": {
+      "node-lighthouse": {
+        "ansible_host": "ip"
+      }
+    }
+  }
+}

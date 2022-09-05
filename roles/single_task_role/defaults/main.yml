@@ -1,10 +1,9 @@
 ---
 # defaults file for single_task_role
-name: first-instance
 zone: ru-central1-a
-subnet_name: default-ru-central1-a
+subnet_name: default_subnet
 image_family: centos-7
-path_ssh: /home/ivan/.ssh/id_rsa.pub
+path_ssh: /Users/ivan/.ssh/id_rsa.pub
 memory: 8
-count_cores: 4
+cpu_count: 4
 disk_size: 30
